@@ -528,6 +528,7 @@ Connect.prototype.run = function(params) {
   }
   ws.onopen = function() {
     log("connection established, " + url + protostring, "system");
+    chrome.storage.local.set({'url': url});
   };
   ws.onclose = function() {
     log("connection closed, " + url + protostring, "system");
@@ -1002,6 +1003,12 @@ function init() {
   if (socket) {
       document.getElementById('url1').value = socket
   }
+
+  chrome.storage.local.get('url', function(result){
+        if(result.url != undefined)
+          document.getElementById('url1').value = result.url;
+  });
+
   refreshclock();
   document.getElementById('clock1').removeAttribute("style");
   setInterval( refreshclock, 500 );
