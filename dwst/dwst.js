@@ -514,6 +514,10 @@ Connect.prototype.help = function() {
 Connect.prototype.info = function() {
   return 'connect to a server'
 }
+
+var connected=false;
+var backOffTime = 3000;
+var reconn = null;
 Connect.prototype.run = function(params) {
   var url = params[0];
   var proto = params[1];
@@ -529,9 +533,18 @@ Connect.prototype.run = function(params) {
   ws.onopen = function() {
     log("connection established, " + url + protostring, "system");
     chrome.storage.local.set({'url': url});
+    connected=true;
+    backOffTime=3000;
+    clearInterval(reconn);
   };
   ws.onclose = function() {
     log("connection closed, " + url + protostring, "system");
+    connected=false;
+    var f = function(){
+              clearInterval(reconn);
+              if(!connected){ guiconbut(); backOffTime=backOffTime*2; }
+              };
+    reconn = setInterval(f, backOffTime);              
     if (document.getElementById('conbut1').value == "disconnect") {
       discogui();
     }
@@ -1012,6 +1025,7 @@ function init() {
   refreshclock();
   document.getElementById('clock1').removeAttribute("style");
   setInterval( refreshclock, 500 );
+
   if (("WebSocket" in window) == false) {
     log('Your browser does not seem to support websockets.', 'error');
     return;
