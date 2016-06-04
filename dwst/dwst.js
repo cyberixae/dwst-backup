@@ -865,14 +865,12 @@ function log(line, type) {
   mlog([line], type);
 }
 
-function mlog(lines, type, binary) {
-  binclass = '';
-  if (binary === true) {
-    binclass = ' binary';
-  }
+function mlog(lines, type) {
   var lineElements = Array.prototype.map.call(lines, rawLine => {
     let line;
     if (typeof rawLine === typeof '') {
+      line = [rawLine];
+    } else if (typeof rawLine === typeof {} && !Array.isArray(rawLine)) {
       line = [rawLine];
     } else {
       line = rawLine;
@@ -898,8 +896,37 @@ function mlog(lines, type, binary) {
             link.appendChild(textSpan);
             return link;
           }
+          if (segment.type === 'hexline') {
+            const textSpan = document.createElement('span');
+            textSpan.setAttribute('class', 'binary');
+            textSpan.innerHTML = segment.text;
+            return textSpan;
+          }
+          if (segment.type === 'download') {
+            const link = document.createElement('a');
+            link.setAttribute('class', 'dwst-mlog__link');
+            link.setAttribute('href', '#');
+            link.setAttribute('title', 'save to file');
+            link.onclick = () => {
+              chrome.fileSystem.chooseEntry({type: 'saveFile', suggestedName: segment.fileName}, writableFileEntry => {
+                writableFileEntry.createWriter(writer => {
+                  writer.onwriteend = (e) => {
+                    console.log('write complete');
+                  };
+                  writer.write(segment.blob);
+                });
+              });
+
+            };
+
+            const textSpan = document.createElement('span');
+            textSpan.innerHTML = htmlescape(segment.text);
+            link.appendChild(textSpan);
+            return link;
+          }
+          throw `unknown segment type ${segment.type}`;
         }
-        throw 'unknown segment type';
+        throw `unknown segment object type ${typeof segment}`;
       });
       return htmlSegments;
     }
@@ -910,7 +937,7 @@ function mlog(lines, type, binary) {
   logLine.setAttribute('class', 'logline');
   logLine.innerHTML = `<td class="time">${time}</td><td class="direction ${type}">${type}:</td></tr>`;
   const outputCell = document.createElement('td');
-  outputCell.setAttribute('class', `preserved${binclass}`);
+  outputCell.setAttribute('class', 'preserved');
   lineElements.forEach(lineElement => {
     lineElement.forEach(segmentElement => {
       outputCell.appendChild(segmentElement);
@@ -942,12 +969,25 @@ function divissimo(l, n) {
   return chunks;
 }
 
-function hexdump(buffer) {
-  function hexify(num) {
-    var hex = num.toString(16);
-    var zero = hex.length < 2 ? '0' : '';
-    return zero + hex;
+function hexify(num) {
+  var hex = num.toString(16);
+  var zero = hex.length < 2 ? '0' : '';
+  return zero + hex;
+}
+
+function hexstring(buffer) {
+  var dv = new DataView(buffer);
+  var offset = 0;
+  var hexes = '';
+  while(offset < buffer.byteLength){
+    byte = dv.getUint8(offset);
+    hexes += hexify(byte);
+    offset += 1;
   }
+  return hexes;
+}
+
+function hexdump(buffer) {
   function charify(num) {
     if (num > 0x7e || num < 0x20) { // non-printable
       return '.';
@@ -982,9 +1022,27 @@ function hexdump(buffer) {
 }
 
 function blog(buffer, type) {
-  msg = `<${buffer.byteLength}B of binary data>`;
-  hd = hexdump(buffer);
-  mlog([msg].concat(hd), type, true);
+  return crypto.subtle.digest('SHA-1', buffer).then(hashBuffer => {
+    const hash = hexstring(hashBuffer);
+
+    const timestamp = (new Date()).toISOString();
+    const fileName = `dwst-${timestamp}-${type}-${hash}.bin`;
+    const blob = new Blob([buffer], {type: 'application/octet-binary'});
+    const msg = {
+      type: 'download',
+      text: `<${buffer.byteLength}B of binary data>`,
+      fileName: fileName,
+      blob: blob,
+    };
+    const hd = hexdump(buffer);
+    const hexLines = hd.map(line => {
+      return {
+        type: 'hexline',
+        text: line,
+      };
+    });
+    mlog([msg].concat(hexLines), type);
+  });
 }
 
 function silent(line) {
