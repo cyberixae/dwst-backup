@@ -404,7 +404,15 @@ class Send {
   run(processed) {
     var msg = processed.join('');
     if (typeof(ws.readyState) === typeof(undefined) || ws.readyState > 1) { //CLOSING or CLOSED
-      mlog(['no connection', `cannot send: ${msg}`, 'connect first with /connect'], 'error');
+      const connectTip = [
+        'connect first with ',
+        {
+          text: '/connect',
+          type: 'command',
+          command: '/help connect',
+        },
+      ];
+      mlog(['no connection', `cannot send: ${msg}`, connectTip], 'error');
       return;
     }
     log(msg, 'sent');
@@ -547,7 +555,15 @@ class Binary {
     var out = joinbufs(buffers).buffer;
     var msg = `<${out.byteLength}B of data> `;
     if (typeof(ws.readyState) === typeof(undefined) || ws.readyState > 1) { //CLOSING or CLOSED
-      mlog(['no connection', `cannot send: ${msg}`, 'connect first with /connect'], 'error');
+      const connectTip = [
+        'connect first with ',
+        {
+          text: '/connect',
+          type: 'command',
+          command: '/help connect',
+        },
+      ];
+      mlog(['no connection', `cannot send: ${msg}`, connectTip], 'error');
       return;
     }
     blog(out, 'sent');
@@ -559,6 +575,19 @@ class Help {
 
   commands() {
     return ['help'];
+  }
+
+  help() {
+    return [
+      'usage: /help <command>',
+    ];
+  }
+
+  examples() {
+    return [
+      '/help send',
+      '/help binary',
+    ];
   }
 
   info() {
@@ -783,7 +812,17 @@ function run(command, params) {
   }
   var plugin = commands[command];
   if (typeof(plugin) === typeof(undefined)) {
-    log(`invalid command: ${command}`, 'error');
+    const errorMessage = `invalid command: ${command}`
+    const helpTip = [
+      'type ',
+      {
+        text: '/help',
+        type: 'command',
+        command: '/help',
+      },
+      ' to list available commands',
+    ];
+    mlog([errorMessage, helpTip], 'error');
     return;
   }
   var processor = (param) => process(plugin, param);
@@ -957,7 +996,12 @@ function silent(line) {
 }
 
 function loud(line) {
-  log(line, 'command');
+  const lineLink = {
+    text: line,
+    type: 'command',
+    command: line,
+  };
+  log(lineLink, 'command');
   silent(line);
 }
 
@@ -965,7 +1009,16 @@ function send() {
   var raw = document.getElementById('msg1').value;
   document.getElementById('msg1').value = '';
   if (raw.length < 1) {
-    log('type /help to list available commands', 'system');
+    const helpTip = [
+      'type ',
+      {
+        text: '/help',
+        type: 'command',
+        command: '/help',
+      },
+      ' to list available commands',
+    ];
+    log(helpTip, 'system');
     return;
   }
   if (raw[0] === '/') {
