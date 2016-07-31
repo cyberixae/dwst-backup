@@ -62,7 +62,7 @@ class Connection {
       1009: 'Message Too Big',
       1010: 'Mandatory Ext.',
       1011: 'Internal Server Error',
-      1015: 'TLS handshake'
+      1015: 'TLS handshake',
     };
     const code = (() => {
       if (meanings.hasOwnProperty(e.code)) {
