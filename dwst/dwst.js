@@ -1249,7 +1249,7 @@ function currenttime() {
     return String(i);
   };
   const date = new Date();
-  const time = `${addzero(date.getHours())}:${addzero(date.getMinutes())}<span class="sec">:${addzero(date.getSeconds())}</span>`;
+  const time = `${addzero(date.getHours())}:${addzero(date.getMinutes())}<span class="sec">:${addzero(date.getSeconds())}:${addzero(date.getMilliseconds())}</span>`;
   return time;
 
 }
